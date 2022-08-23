@@ -1,21 +1,23 @@
 import React from "react"
-import axios from "axios"
 import { Routes, Route } from 'react-router-dom'
+import axios from "axios"
 
-import AppContext from "./context"
-import Drawer from "./components/Drawer"
 import Header from "./components/Header"
+import Drawer from "./components/Drawer"
 import Home from "./pages/Home"
 import Favorites from "./pages/Favorites"
+import Orders from './pages/Orders'
+import AppContext from "./context"
+import { _API_URL } from "./api"
 
-const _API_URL = 'https://62fb9453e4bcaf5351886bc7.mockapi.io/'
+
 
 function App() {
   const [items, setItems] = React.useState([])
   const [cartItems, setCartItems] = React.useState([])
   const [favorites, setFavorites] = React.useState([])
   const [searchValue, setSearchValue] = React.useState('')
-  const [cartOpened, setCartOpened] = React.useState(true)
+  const [cartOpened, setCartOpened] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(true)
 
   React.useEffect(() => {
@@ -27,52 +29,78 @@ function App() {
     //     setItems(json)
     //   })
     async function fetchData() {
-      const cartResponse = await axios.get(`${_API_URL}cart`)
-      const favoriteResponse = axios.get(`${_API_URL}favorites`)
-      const itemsResponse = await axios.get(`${_API_URL}items`)
+      try {
+        const [cartResponse, favoriteResponse, itemsResponse] = await Promise.all([
+          axios.get(`${_API_URL}cart`),
+          axios.get(`${_API_URL}favorites`),
+          axios.get(`${_API_URL}items`)
+        ])
 
-      setIsLoading(false)
+        setIsLoading(false)
 
-      setCartItems(cartResponse.data)
-      setFavorites(favoriteResponse.data)
-      setItems(itemsResponse.data)
+        setCartItems(cartResponse.data)
+        setFavorites(favoriteResponse.data)
+        setItems(itemsResponse.data)
+      } catch (error) {
+        alert('The request error ;(')
+        console.error(error)
+      }
     }
+
     fetchData()
   }, [])
 
-  const onAddToCart = (obj) => {
+  const onAddToCart = async (obj) => {
     try {
-      if (cartItems.find(item => Number(item.id) === Number(obj.id))) {
-        axios.delete(`${_API_URL}cart/${Number(obj.id)}`)
-        setCartItems(prev => prev.filter(item => Number(item.id) !== Number(obj.id)))
+      const findItem = cartItems.find((item) => Number(item.parentId) === Number(obj.id))
+      if (findItem) {
+        setCartItems((prev) => prev.filter((item) => Number(item.parentId) !== Number(obj.id)))
+        await axios.delete(`${_API_URL}cart/${findItem.id}`)
       } else {
-        axios.post(`${_API_URL}cart`, obj)
-        setCartItems(prev => [...prev, obj])
+        setCartItems((prev) => [...prev, obj])
+        const { data } = await axios.post(`${_API_URL}cart`, obj)
+        setCartItems((prev) =>
+          prev.map((item) => {
+            if (item.parentId === data.parentId) {
+              return {
+                ...item,
+                id: data.id,
+              };
+            }
+            return item
+          }),
+        )
       }
     } catch (error) {
-      console.log('Add to cart:', error)
+      alert('Error adding to cart')
+      console.error(error)
     }
   }
 
   const onRemoveItem = (id) => {
-    axios.delete(`${_API_URL}cart/${id}`)
-    setCartItems(prev => prev.filter(item => item.id !== id))
+    try {
+      axios.delete(`${_API_URL}cart/${id}`)
+      setCartItems((prev) => prev.filter((item) => Number(item.id) !== Number(id)))
+    } catch (error) {
+      alert('Error when deleting from cart')
+      console.error(error)
+    }
   }
 
   const onAddToFavorite = async (obj) => {
     try {
-      if (favorites.find(el => el.id === obj.id)) {
+      if (favorites.find((favObj) => Number(favObj.id) === Number(obj.id))) {
         axios.delete(`${_API_URL}favorites/${obj.id}`)
-        setFavorites(prev => prev.filter(item => item.id !== obj.id))
+        setFavorites((prev) => prev.filter((item) => Number(item.id) !== Number(obj.id)));
       } else {
         const { data } = await axios.post(`${_API_URL}favorites`, obj)
-        setFavorites(prev => [...prev, data])
+        setFavorites((prev) => [...prev, data])
       }
     } catch (error) {
-      console.dir('Can"t add to favorites:', error)
+      alert('Can"t add to favorites')
+      console.error(error)
     }
-
-  }
+  };
 
   const onChangeSearchInput = (event) => {
     setSearchValue(event.target.value)
@@ -84,17 +112,25 @@ function App() {
 
   return (
     <AppContext.Provider
-      value={{ items, cartItems, favorites, isItemAdded, onAddToFavorite, setCartOpened }}
-    >
+      value={{
+        items,
+        cartItems,
+        favorites,
+        isItemAdded,
+        onAddToFavorite,
+        onAddToCart,
+        setCartOpened,
+        setCartItems,
+      }}>
       <div className="wrapper clear">
+        <Drawer
+          items={cartItems}
+          onClose={() => setCartOpened(false)}
+          onRemove={onRemoveItem}
+          opened={cartOpened}
+        />
         <Header onClickCart={() => setCartOpened(true)} />
-        {
-          cartOpened && <Drawer
-            items={cartItems}
-            onClose={() => setCartOpened(false)}
-            onRemove={onRemoveItem}
-          />
-        }
+
         <Routes>
           <Route path="/" element={
             <Home
@@ -108,12 +144,9 @@ function App() {
               isLoading={isLoading}
             />
           } />
-          <Route path="/favorites" element={
-            <Favorites onAddToFavorite={onAddToFavorite} />
-          } />
+          <Route path="/favorites" element={<Favorites />} />
+          <Route path="/orders" element={<Orders />} />
         </Routes>
-
-
       </div>
     </AppContext.Provider>
   )

@@ -10,7 +10,6 @@ const Info = ({ title, image, description }) => {
         alt="Empty Cart Image"
         className="mb-20"
         width={120}
-        height={120}
       />
       <h2>{title}</h2>
       <p className="opacity-6">{description}</p>

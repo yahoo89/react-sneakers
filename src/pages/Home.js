@@ -35,7 +35,14 @@ const Home = (props) => {
         <h1>{searchValue ? `Search by: "${searchValue}"` : 'All Sneakers'}</h1>
         <div className="search-block">
           <img src="/img/search.svg" alt="Search" />
-          {searchValue && <img onClick={() => setSearchValue('')} className="clear cu-p" src="/img/btn-remove.svg" alt="Close" />}
+          {searchValue && (
+            <img
+              onClick={() => setSearchValue('')}
+              className="clear cu-p"
+              src="img/btn-remove.svg"
+              alt="Clear"
+            />
+          )}
           <input
             type="text"
             placeholder="Search..."

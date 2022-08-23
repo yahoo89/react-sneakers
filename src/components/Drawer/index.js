@@ -1,13 +1,49 @@
 import React from "react"
+import axios from 'axios'
+
 import Info from "../Info"
+import { useCart } from '../../hooks/useCart'
+import AppContext from "../../context"
+import { _API_URL } from "../../api"
 
 import styles from './Drawer.module.scss'
 
-function Drawer({ onClose, items = [], onRemove }) {
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function Drawer({ onClose, onRemove, items = [], opened }) {
+  const { cartItems, setCartItems, totalPrice } = useCart()
+  const [orderId, setOrderId] = React.useState(null)
+  const [isOrderComplete, setIsOrderComplete] = React.useState(false)
+  const [isLoading, setIsLoading] = React.useState(false)
 
+  const onClickOrder = async () => {
+    try {
+      setIsLoading(true)
+      const { data } = await axios.post('/orders', {
+        items: cartItems,
+      })
+      setOrderId(data.id)
+      setIsOrderComplete(true)
+      setCartItems([])
+
+      // for (let i = 0; i < cartItems.length; i++) {
+      //   const item = cartItems[i];
+      //   await axios.delete('/cart/' + item.id);
+      //   await delay(1000);
+      // }
+      for (const item of cartItems) {
+        console.log('cartItems ID:', cartItems)
+        await axios.delete(`${_API_URL}cart/` + item.id)
+        await delay(1000)
+      }
+    } catch (error) {
+      alert('The order is not success :(')
+    }
+    setIsLoading(false)
+  }
   return (
-    <div className={styles.overlay}>
+
+    <div className={`${styles.overlay} ${opened ? styles.overlayVisible : ''}`}>
       <div className={styles.drawer}>
         <h2 className="mb-30 d-flex justify-between">
           Cart
@@ -52,15 +88,19 @@ function Drawer({ onClose, items = [], onRemove }) {
                   <li>
                     <span>Total:</span>
                     <div></div>
-                    <b>2000$</b>
+                    <b>{totalPrice}$</b>
                   </li>
                   <li>
                     <span>Tax 5%:</span>
                     <div></div>
-                    <b>5$</b>
+                    <b>{(totalPrice / 100) * 5} $</b>
                   </li>
                 </ul>
-                <button className="greenButton">
+                <button
+                  className="greenButton"
+                  onClick={onClickOrder}
+                  disabled={isLoading}
+                >
                   Сheckout
                   <img src="/img/arrow.svg" alt="Arrow" />
                 </button>
@@ -68,14 +108,20 @@ function Drawer({ onClose, items = [], onRemove }) {
             </>
           ) : (
             <Info
-              title="The cart is empty"
-              description="Please, add any sneakers"
-              image="/img/empty-cart.jpg"
+              title={isOrderComplete ? "The order is processed" : "The cart is empty"}
+              description={
+                isOrderComplete
+                  ? `The order #${orderId} on the way`
+                  : "Please, add any sneakers"
+              }
+              image={
+                isOrderComplete
+                  ? "/img/complete-order.jpg"
+                  : "/img/empty-cart.jpg"
+              }
             />
           )
         }
-
-
       </div>
     </div >
   )
