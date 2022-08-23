@@ -1,4 +1,5 @@
 import React from "react"
+import Info from "../Info"
 
 import styles from './Drawer.module.scss'
 
@@ -24,7 +25,10 @@ function Drawer({ onClose, items = [], onRemove }) {
               <div className={styles.items}>
                 {
                   items.map(item => (
-                    <div className="cartItem d-flex align-center mb-20" >
+                    <div
+                      key={item.id}
+                      className="cartItem d-flex align-center mb-20"
+                    >
                       <div
                         className="cartItemImg"
                         style={{ backgroundImage: `url(${item.imageUrl})` }}
@@ -63,24 +67,11 @@ function Drawer({ onClose, items = [], onRemove }) {
               </div>
             </>
           ) : (
-            <div className="cartEmpty d-flex align-center justify-center flex-column flex">
-              <img
-                src="/img/empty-cart.jpg"
-                alt="Empty Cart Image"
-                className="mb-20"
-                width={120}
-                height={120}
-              />
-              <h2>The Cart is empty</h2>
-              <p className="opacity-6">Please, add sneakers</p>
-              <button
-                className="greenButton"
-                onClick={onClose}
-              >
-                <img src="/img/arrow.svg" alt="Arrow" />
-                Return
-              </button>
-            </div>
+            <Info
+              title="The cart is empty"
+              description="Please, add any sneakers"
+              image="/img/empty-cart.jpg"
+            />
           )
         }
 
